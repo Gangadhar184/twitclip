@@ -20,7 +20,7 @@ public class VideoClipController {
     }
 
     @PostMapping
-    public ResponseEntity<ClipResponse> clipVideo(@RequestBody ClipRequest request) {
+    public ResponseEntity<?> clipVideo(@RequestBody ClipRequest request) {
         if (request.tweetUrl() == null || request.tweetUrl().isBlank()) {
             return ResponseEntity.badRequest()
                     .body(new ClipResponse("tweetUrl is required"));

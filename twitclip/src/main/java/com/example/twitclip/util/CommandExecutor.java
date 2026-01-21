@@ -22,13 +22,21 @@ public class CommandExecutor {
                 });
             }
 
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new RuntimeException("Command failed:\n" + output);
+            boolean finished = process.waitFor(5, java.util.concurrent.TimeUnit.MINUTES);
+            if (!finished) {
+                process.destroyForcibly();
+                throw new IllegalStateException("Command timed out");
             }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                throw new IllegalStateException(
+                        "Command failed: " + String.join(" ", command) + "\n" + output
+                );
+            }
+
         } catch (Exception e) {
-            throw new RuntimeException("Command execution failed", e);
+            throw new IllegalStateException("Execution failed: " + String.join(" ", command), e);
         }
     }
-
 }

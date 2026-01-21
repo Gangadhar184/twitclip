@@ -14,9 +14,13 @@ public class DownloadController {
     @GetMapping("/{filename}")
     public ResponseEntity<FileSystemResource> download(@PathVariable String filename) {
 
-        File file = new File("download/" + filename);
+        if (!filename.matches("[a-zA-Z0-9._-]+")) {
+            return ResponseEntity.badRequest().build();
+        }
 
-        if (!file.exists()) {
+        File file = new File("download", filename);
+
+        if (!file.exists() || !file.isFile()) {
             return ResponseEntity.notFound().build();
         }
 
@@ -25,4 +29,5 @@ public class DownloadController {
                         "attachment; filename=\"" + file.getName() + "\"")
                 .body(new FileSystemResource(file));
     }
+
 }
