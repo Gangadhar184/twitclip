@@ -11,7 +11,7 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedMethods("GET", "POST", "OPTIONS")
                 .allowCredentials(false)
-                .allowedOrigins("*")
+                .allowedOrigins("https://frontend-twitclip.vercel.app/")
                 .allowedHeaders("*");
     }
 }
