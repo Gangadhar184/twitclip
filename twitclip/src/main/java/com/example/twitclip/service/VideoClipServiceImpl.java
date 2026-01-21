@@ -2,12 +2,14 @@ package com.example.twitclip.service;
 
 import com.example.twitclip.dto.ClipRequest;
 import com.example.twitclip.dto.ClipResponse;
+import com.example.twitclip.security.SignedUrlService;
 import com.example.twitclip.util.CommandExecutor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class VideoClipServiceImpl implements VideoClipService {
@@ -15,10 +17,15 @@ public class VideoClipServiceImpl implements VideoClipService {
     @Value("${app.base-url}")
     private String baseUrl;
 
-    private final CommandExecutor executor;
+    @Value("${app.download.url-expiry-minutes:10}")
+    private long expiryMinutes;
 
-    public VideoClipServiceImpl(CommandExecutor executor) {
+    private final CommandExecutor executor;
+    private final SignedUrlService signedUrlService;
+
+    public VideoClipServiceImpl(CommandExecutor executor, SignedUrlService signedUrlService) {
         this.executor = executor;
+        this.signedUrlService = signedUrlService;
     }
 
     @Override
@@ -38,7 +45,6 @@ public class VideoClipServiceImpl implements VideoClipService {
         String videoFile = "download/raw_" + timestamp + ".mp4";
         String clippedFile = "download/clipped_" + timestamp + ".mp4";
 
-        //download
         executor.execute(
                 "yt-dlp",
                 "-f", "mp4",
@@ -52,14 +58,26 @@ public class VideoClipServiceImpl implements VideoClipService {
 
         buildFfmpegCommand(request, videoFile, clippedFile);
 
-        if (!new File(clippedFile).exists()) {
+        File outputFile = new File(clippedFile);
+        if (!outputFile.exists()) {
             throw new IllegalStateException("Clip file not created");
         }
 
-        return new ClipResponse(
-                baseUrl + "/download/" + new File(clippedFile).getName()
-        );
+        long expiresAt = Instant.now()
+                .plus(expiryMinutes, ChronoUnit.MINUTES)
+                .toEpochMilli();
+
+        String fileName = outputFile.getName();
+        String signature = signedUrlService.generateSignature(fileName, expiresAt);
+
+        String downloadUrl =
+                baseUrl + "/download/" + fileName +
+                        "?expires=" + expiresAt +
+                        "&sig=" + signature;
+
+        return new ClipResponse(downloadUrl);
     }
+
 
     private void buildFfmpegCommand(ClipRequest request, String input, String output) {
 
