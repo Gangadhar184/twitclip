@@ -2,15 +2,19 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y ffmpeg curl && \
-    rm -rf /var/lib/apt/lists/*
+COPY . .
+
+RUN chmod +x mvnw
 
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
     -o /usr/local/bin/yt-dlp && chmod +x /usr/local/bin/yt-dlp
 
-COPY target/clipx.jar app.jar
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 9000
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar"]
