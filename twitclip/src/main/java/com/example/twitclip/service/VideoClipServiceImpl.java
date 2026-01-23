@@ -1,6 +1,7 @@
 package com.example.twitclip.service;
 
 import com.example.twitclip.dto.ClipRequest;
+import com.example.twitclip.config.VirtualThreadConfig;
 import com.example.twitclip.dto.ClipResponse;
 import com.example.twitclip.security.SignedUrlService;
 import com.example.twitclip.util.CommandExecutor;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 public class VideoClipServiceImpl implements VideoClipService {
@@ -22,15 +25,23 @@ public class VideoClipServiceImpl implements VideoClipService {
 
     private final CommandExecutor executor;
     private final SignedUrlService signedUrlService;
+    private final Executor taskExecutor;
 
-    public VideoClipServiceImpl(CommandExecutor executor, SignedUrlService signedUrlService) {
+    public VideoClipServiceImpl(CommandExecutor executor, SignedUrlService signedUrlService, Executor taskExecutor) {
         this.executor = executor;
         this.signedUrlService = signedUrlService;
+        this.taskExecutor = taskExecutor;
     }
 
     @Override
     public ClipResponse clipVideo(ClipRequest request) {
 
+       return  CompletableFuture
+               .supplyAsync(() -> processClip(request), taskExecutor)
+               .join();
+    }
+
+    private ClipResponse processClip(ClipRequest request) {
         validateRequest(request);
         ensureBinariesExist();
 
